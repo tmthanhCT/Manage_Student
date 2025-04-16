@@ -16,6 +16,8 @@ import javax.swing.table.DefaultTableModel;
 
 import com.fpi.it.thanhtm_bc00323.assignmentfinal.model.Student;
 import com.fpi.it.thanhtm_bc00323.assignmentfinal.utils.StudentUtils;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.util.HashMap;
 
 public class StudentController {
@@ -27,16 +29,16 @@ public class StudentController {
         this.students = students;
         this.model = model;
     }
-    
-   public StudentController() {
-    this.students = new HashMap<>();
-    this.model = new DefaultTableModel(new String[]{"ID", "Name", "Course", "Major", "Class", "Average Score", "Rank"}, 0) {
-        @Override
-        public boolean isCellEditable(int row, int column) {
-            return false;
-        }
-    };
-}
+
+    public StudentController() {
+        this.students = new HashMap<>();
+        this.model = new DefaultTableModel(new String[]{"ID", "Name", "Course", "Major", "Class", "Average Score", "Rank"}, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+    }
 
     public void addStudent(String id, String name, String course, String major, String className,
             String subject1, double grade1, String subject2, double grade2, String subject3, double grade3) {
@@ -52,7 +54,7 @@ public class StudentController {
 
         students.put(id, student);
         loadTableData();
-        
+
     }
 
     public void editStudent(String id, String name, String course, String major, String className,
@@ -78,35 +80,33 @@ public class StudentController {
     }
 
     public void searchStudents(String keyword) {
-        List<Student> sortedList = new ArrayList<>(students.values());
-    sortedList.sort(Comparator.comparing(Student::getName));
+        model.setRowCount(0);
 
-    int index = binarySearchByName(sortedList, keyword);
+        keyword = keyword.trim().toLowerCase();
 
-    model.setRowCount(0);
-    if (index != -1) {
-        Student s = sortedList.get(index);
-        double avg = s.getAverageScore();
-        model.addRow(new Object[]{
-            s.getId(), s.getName(), s.getCourse(), s.getMajor(), s.getClassName(),
-            String.format("%.2f", avg), StudentUtils.getRank(avg)
-        });
-    } else {
-        JOptionPane.showMessageDialog(null, "Student not found!");
-    }
-}
+        for (Student student : students.values()) {
+            double avg = student.getAverageScore();
+            String rank = StudentUtils.getRank(avg);
 
-    private int binarySearchByName(List<Student> list, String name) {
-    int low = 0, high = list.size() - 1;
-    while (low <= high) {
-        int mid = (low + high) / 2;
-        int cmp = list.get(mid).getName().compareToIgnoreCase(name);
-        if (cmp == 0) return mid;
-        else if (cmp < 0) low = mid + 1;
-        else high = mid - 1;
+            if (student.getId().toLowerCase().contains(keyword)
+                    || student.getName().toLowerCase().contains(keyword)
+                    || student.getCourse().toLowerCase().contains(keyword)
+                    || student.getMajor().toLowerCase().contains(keyword)
+                    || student.getClassName().toLowerCase().contains(keyword)
+                    || rank.toLowerCase().contains(keyword)) {
+
+                model.addRow(new Object[]{
+                    student.getId(),
+                    student.getName(),
+                    student.getCourse(),
+                    student.getMajor(),
+                    student.getClassName(),
+                    String.format("%.2f", avg),
+                    rank
+                });
+            }
         }
-    return -1;
-    }   
+    }
 
     public void loadTableData() {
         model.setRowCount(0);
@@ -125,20 +125,22 @@ public class StudentController {
     }
 
     public void loadStudentsFromFile() {
-    try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream("students.dat"))) {
-        students = (Map<String, Student>) ois.readObject();
-        loadTableData(); // reloads the table view from map
-    } catch (IOException | ClassNotFoundException e) {
-        JOptionPane.showMessageDialog(null, "Error loading students: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream("students.dat"))) {
+            students = (Map<String, Student>) ois.readObject();
+            loadTableData(); // reloads the table view from map
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(null, "Error loading students: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
-}
 
     public void saveStudentsToFile() {
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("students.dat"))) {
             oos.writeObject(students);
-            JOptionPane.showMessageDialog(null, "Students saved successfully to file.");
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, "Error saving students: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null,
+                    "Error saving students: " + e.getMessage(),
+                    "Save Error", JOptionPane.ERROR_MESSAGE);
         }
     }
+
 }
